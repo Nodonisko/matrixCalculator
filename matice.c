@@ -1,3 +1,5 @@
+// this should fix undeclared getline in some compilers
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,10 +8,10 @@
 
 int chyba;
 
-struct MatrixSize {
+typedef struct MatrixSize {
     int rows;
     int columns;
-};
+} MatrixSize;
 
 struct MatrixSize determineMatrixSizeFromFile(const char *filePath) {
     FILE *fp;
@@ -50,35 +52,54 @@ struct MatrixSize determineMatrixSizeFromFile(const char *filePath) {
     return matrixSize;
 }
 
-struct matice initMatrix(int rows, int columns) {
-    struct matice matrix = {.m = rows, .n = columns};
+matice initMatrix(int rows, int columns) {
+    matice matrix = {.m = rows, .n = columns};
     
     matrix.data = malloc(rows * sizeof(float *));
     
+    if((int *)matrix.data == NULL) {
+        chyba = CHYBA_ALOKACE;
+        return matrix;
+    }
+    
     for(int i = 0; i < rows; i++) {
         matrix.data[i] = malloc(columns * sizeof(int));
+        
+        if((int *)matrix.data[i] == NULL) {
+            chyba = CHYBA_ALOKACE;
+            return matrix;
+        }
     }
     
     return matrix;
 }
 
-void deleteMatrix(struct matice matrix) {
+void deleteMatrix(matice matrix) {
     for(int i = 0; i < matrix.m; i++) {
         free(matrix.data[i]);
     }
     free(matrix.data);
 }
 
-void setElement(struct matice matrix, int row, int column, float value) {
-    matrix.data[row][column] = value;
+void setElement(matice matrix, int row, int column, float value) {
+    if(row > matrix.m || column > matrix.n) {
+        chyba = CHYBA_TYPU;
+    } else {
+        matrix.data[row][column] = value;
+    }
 }
 
-float getElement(struct matice matrix, int row, int column) {
+float getElement(matice matrix, int row, int column) {
+    if(row > matrix.m || column > matrix.n) {
+        chyba = CHYBA_TYPU;
+        return 0;
+    }
+    
     return matrix.data[row][column];
 }
 
 char lineString[255];
-char* matrixLineToString(struct matice matrix, int rowNumber) {
+char* matrixLineToString(matice matrix, int rowNumber) {
     
     int index = 0;
     for (int columnNumber = 0; columnNumber < matrix.n; columnNumber++) {
@@ -95,15 +116,15 @@ char* matrixLineToString(struct matice matrix, int rowNumber) {
     return (char*)lineString;
 }
 
-void printMatrix(struct matice matrix) {
+void printMatrix(matice matrix) {
     for (int line = 0; line < matrix.m; line++) {
         printf("%s\n", matrixLineToString(matrix, line));
     }
 }
 
 
-struct matice createZeroMatrix(int rows, int columns) {
-    struct matice matrix = initMatrix(rows, columns);
+matice createZeroMatrix(int rows, int columns) {
+    matice matrix = initMatrix(rows, columns);
     
     for (int row = 0; row < rows; row++) {
         for (int column = 0; column < columns; column++) {
@@ -114,19 +135,27 @@ struct matice createZeroMatrix(int rows, int columns) {
     return matrix;
 }
 
-struct matice createIdentityMatrix(int size) {
-    struct matice matrix = createZeroMatrix(size, size);
+matice createIdentityMatrix(int m, int n) {
+    // Identity matrix must be square
+    if(m != n) {
+        chyba = CHYBA_TYPU;
+    }
     
-    for (int i = 0; i < size; i++) {
+    matice matrix = createZeroMatrix(n, n);
+    
+    for (int i = 0; i < n; i++) {
         setElement(matrix, i, i, 1);
     }
     
     return matrix;
 }
 
-struct matice openMatrixFromFile(const char *filePath) {
-    struct MatrixSize matrixSize = determineMatrixSizeFromFile(filePath);
-    struct matice matrix = initMatrix(matrixSize.rows, matrixSize.columns);
+matice openMatrixFromFile(const char *filePath) {
+    // This function is not so smart, because it's opening file twice
+    // because I need find out matrix size for dynamic allocation before filling it
+    // from file content.
+    MatrixSize matrixSize = determineMatrixSizeFromFile(filePath);
+    matice matrix = initMatrix(matrixSize.rows, matrixSize.columns);
     
     FILE *fp;
     fp = fopen(filePath, "r");
@@ -164,7 +193,7 @@ struct matice openMatrixFromFile(const char *filePath) {
     return matrix;
 }
 
-void writeMatrixToFile(struct matice matrix, const char *filePath) {
+void writeMatrixToFile(matice matrix, const char *filePath) {
     FILE *fp;
     fp = fopen(filePath, "w");
 
@@ -186,8 +215,8 @@ void writeMatrixToFile(struct matice matrix, const char *filePath) {
 
 #define SUM 1
 #define SUBTRACT 2
-struct matice addOrSubstractMatrices(struct matice matrix1, struct matice matrix2, int operation) {
-    struct matice resultMatrix = initMatrix(matrix1.m, matrix1.n);
+matice addOrSubstractMatrices(matice matrix1, matice matrix2, int operation) {
+    matice resultMatrix = initMatrix(matrix1.m, matrix1.n);
     
     if(matrix1.m != matrix2.m || matrix1.n != matrix2.n) {
         chyba = CHYBA_TYPU;
@@ -214,8 +243,8 @@ struct matice addOrSubstractMatrices(struct matice matrix1, struct matice matrix
     return resultMatrix;
 }
 
-struct matice matrixScalarMultiplication(struct matice matrix, float scalar) {
-    struct matice resultMatrix = initMatrix(matrix.m, matrix.n);
+matice matrixScalarMultiplication(matice matrix, float scalar) {
+    matice resultMatrix = initMatrix(matrix.m, matrix.n);
     
     for (int row = 0; row < resultMatrix.m; row++) {
         for (int column = 0; column < resultMatrix.n; column++) {
@@ -230,8 +259,8 @@ struct matice matrixScalarMultiplication(struct matice matrix, float scalar) {
     return  resultMatrix;
 }
 
-struct matice matrixTransposition(struct matice matrix) {
-    struct matice resultMatrix = initMatrix(matrix.n, matrix.m);
+matice matrixTransposition(matice matrix) {
+    matice resultMatrix = initMatrix(matrix.n, matrix.m);
     
     for (int row = 0; row < resultMatrix.m; row++) {
         for (int column = 0; column < resultMatrix.n; column++) {
@@ -245,7 +274,7 @@ struct matice matrixTransposition(struct matice matrix) {
     return  resultMatrix;
 }
 
-int matrixSize(struct matice matrix, int dimension) {
+int matrixSize(matice matrix, int dimension) {
     if(dimension == 1) {
         return matrix.m;
     }
@@ -253,8 +282,8 @@ int matrixSize(struct matice matrix, int dimension) {
     return matrix.n;
 }
 
-struct matice matricesMultiplication(struct matice matrix1, struct matice matrix2) {
-    struct matice resultMatrix = initMatrix(matrix1.m, matrix2.n);
+matice matricesMultiplication(matice matrix1, matice matrix2) {
+    matice resultMatrix = initMatrix(matrix1.m, matrix2.n);
     
     if(matrix1.n != matrix2.m) {
         chyba = CHYBA_TYPU;
@@ -276,69 +305,65 @@ struct matice matricesMultiplication(struct matice matrix1, struct matice matrix
     return  resultMatrix;
 }
 
-/* ---- START OF PUBLIC API ------ */
+/* ---- START OF PUBLIC API bindings ------ */
 
-struct matice inicializace(int m, int n) {
+matice inicializace(int m, int n) {
     return initMatrix(m, n);
 }
 
-struct matice nulova(int m, int n) {
+matice nulova(int m, int n) {
     return createZeroMatrix(m, n);
 }
 
-struct matice jednotkova(int m, int n) {
-    if(m != n) {
-        chyba = CHYBA_TYPU;
-    }
-    
-    return createIdentityMatrix(m);
+matice jednotkova(int m, int n) {
+    return createIdentityMatrix(m, n);
 }
 
-void odstran(struct matice mat) {
+void odstran(matice mat) {
     deleteMatrix(mat);
 }
 
-void vypis(struct matice mat) {
+void vypis(matice mat) {
     printMatrix(mat);
 }
 
-struct matice plus(struct matice mat1, struct matice mat2) {
+matice plus(matice mat1, matice mat2) {
     return addOrSubstractMatrices(mat1, mat2, SUM);
 }
 
-struct matice minus(struct matice mat1, struct matice mat2) {
+matice minus(matice mat1, matice mat2) {
     return addOrSubstractMatrices(mat1, mat2, SUBTRACT);
 }
 
-struct matice nasobeni(struct matice mat, float skalar) {
+matice nasobeni(matice mat, float skalar) {
     return matrixScalarMultiplication(mat, skalar);
 }
 
-struct matice transpozice(struct matice mat) {
+matice transpozice(matice mat) {
     return matrixTransposition(mat);
 }
 
-struct matice krat(struct matice mat1, struct matice mat2) {
+matice krat(matice mat1, matice mat2) {
     return matricesMultiplication(mat1, mat2);
 }
 
-struct matice nacti_ze_souboru(const char *soubor) {
+matice nacti_ze_souboru(const char *soubor) {
     return openMatrixFromFile(soubor);
 }
 
-void uloz_do_souboru(struct matice mat, const char *soubor) {
+void uloz_do_souboru(matice mat, const char *soubor) {
     writeMatrixToFile(mat, soubor);
 }
 
-int velikost(struct matice mat, int dimenze) {
+int velikost(matice mat, int dimenze) {
     return matrixSize(mat, dimenze);
 }
 
-float prvek(struct matice mat, int i, int j) {
+float prvek(matice mat, int i, int j) {
     return getElement(mat, i, j);
 }
 
-void nastav_prvek(struct matice mat, int i, int j, float hodnota) {
+void nastav_prvek(matice mat, int i, int j, float hodnota) {
     return setElement(mat, i, j, hodnota);
 }
 

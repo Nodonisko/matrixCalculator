@@ -12,40 +12,40 @@
 
 extern int chyba;
 
-struct matice {
+typedef struct matice {
     int m; // number of rows
     int n; // number of columns
     float **data;
-};
+} matice;
 
-struct matice inicializace(int m, int n);
+matice inicializace(int m, int n);
 
-struct matice nulova(int m, int n);
+matice nulova(int m, int n);
 
-struct matice jednotkova(int m, int n);
+matice jednotkova(int m, int n);
 
-void odstran(struct matice mat);
+void odstran( matice mat);
 
-void vypis(struct matice mat);
+void vypis(matice mat);
 
-struct matice plus(struct matice mat1, struct matice mat2);
+matice plus(matice mat1, matice mat2);
 
-struct matice minus(struct matice mat1, struct matice mat2);
+matice minus(matice mat1, matice mat2);
 
-struct matice nasobeni(struct matice mat, float skalar);
+matice nasobeni(matice mat, float skalar);
 
-struct matice transpozice(struct matice mat);
+matice transpozice(matice mat);
 
-struct matice krat(struct matice mat1, struct matice mat2);
+matice krat(matice mat1, matice mat2);
 
-struct matice nacti_ze_souboru(const char *soubor);
+matice nacti_ze_souboru(const char *soubor);
 
-void uloz_do_souboru(struct matice mat, const char *soubor);
+void uloz_do_souboru(matice mat, const char *soubor);
 
-int velikost(struct matice mat, int dimenze);
+int velikost(matice mat, int dimenze);
 
-float prvek(struct matice mat, int i, int j);
+float prvek(matice mat, int i, int j);
 
-void nastav_prvek(struct matice mat, int i, int j, float hodnota);
+void nastav_prvek(matice mat, int i, int j, float hodnota);
 
 #endif /* matice_h */
